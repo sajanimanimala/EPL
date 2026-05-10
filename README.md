@@ -12,13 +12,18 @@ Most existing tools either focus only on reading text aloud or require heavy scr
  ## Target Users
 
 Visually impaired students
+
 Partially visually impaired users
+
 Learners who prefer voice-based interaction
 
 
  ## Key Features
+
  1. Enhance Productivity.
- 2. Facilitate Learning
+    
+ 2. Facilitate Learning.
+   
  3. Research
 
 
@@ -27,40 +32,55 @@ The key innovation of EchoEd is its complete voice-first interaction system — 
 
  ## Tech Stack
 1.Voice Processing Layer
+
 Whisper (Speech-to-Text)
+
 Coqui TTS (Text-to-Speech)
 
 2. Frontend
+   
 Figma (UI Design - TypeScript)
+
 React (JavaScript Library)
 
 3. Backend
+   
 Python
+
 FastAPI
 
 4. Research Integration
+   
 arXiv API
 
 5. Document Processing
+   
 PyPDF2
 
 6. Database
+   
 SQLite
 
 7. Communication
+   
 REST API
 
 
  ## Accessibility
  Fully voice-enabled navigation
+ 
  Zero screen interaction required
+ 
  High-contrast, low-clutter UI for partially impaired users
+ 
  Open-source voice tools (offline capable)
+ 
  Works with varied accents (Whisper)
 
 ## Team Details:
 
 Team Name:EchoEd
+
 Team members:Sajani Manimala,Madiha Javeed.
 
 ## License:
