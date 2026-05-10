@@ -8,8 +8,10 @@ EchoEd is a fully voice-driven learning assistant designed to help visually impa
 AT-02-S5 — Voice-Based Learning Assistant for Visually Impaired
 Most existing tools either focus only on reading text aloud or require heavy screen interaction, making them difficult to use without vision. EchoEd solves this by enabling complete interaction through voice — from navigation to learning and productivity.
 
+## Aligmnent with SDGs
+Our project, EchoEd, aligns with United Nations Sustainable Development Goals by promoting inclusive and equitable education for blind and partially visually impaired individuals through accessible AI-powered learning and productivity tools. It directly supports Sustainable Development Goal 4 by making educational content more accessible, and Sustainable Development Goal 10 by reducing accessibility barriers in digital learning and research environments.
 
- ## Target Users
+## Target Users
 
 Visually impaired students
 
@@ -75,5 +77,6 @@ Team members:Sajani Manimala,Madiha Javeed.
 
 ## License:
 This project is built for Engineers Prototype League (EPL) by Stanley ACM-W Chapter in association with CodeCrypt Club. 
+
 
   
