@@ -31,39 +31,29 @@ Learners who prefer voice-based interaction
 The key innovation of EchoEd is its complete voice-first interaction system — voice is not just an input/output method, but the primary way users navigate, learn, and interact with the application. Unlike typical assistants, EchoEd combines productivity, learning, and research into a single continuous voice experience.
 
  ## Tech Stack
-1.Voice Processing Layer
+# Voice Processing Layer
+ Whisper (Speech-to-Text)
+ Coqui TTS (Text-to-Speech)
 
-Whisper (Speech-to-Text)
+#  Frontend
+  Figma (UI Design - TypeScript)
+  React (JavaScript Library)
 
-Coqui TTS (Text-to-Speech)
+# Backend
+  Python
+  FastAPI
 
-2. Frontend
-   
-Figma (UI Design - TypeScript)
+# Research Integration
+   arXiv API
 
-React (JavaScript Library)
+# Document Processing
+   PyPDF2
 
-3. Backend
-   
-Python
+# Database
+   SQLite
 
-FastAPI
-
-4. Research Integration
-   
-arXiv API
-
-5. Document Processing
-   
-PyPDF2
-
-6. Database
-   
-SQLite
-
-7. Communication
-   
-REST API
+# Communication
+   REST API
 
 
  ## Accessibility
