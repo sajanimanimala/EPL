@@ -35,7 +35,46 @@ interface PerformanceEntry {
   actual: number;
 }
 
-// ── Record audio for given ms ──
+// ── Convert word numbers to digits ──
+function wordsToNumbers(text: string): string {
+  const map: Record<string, string> = {
+    "one": "1", "two": "2", "three": "3", "four": "4",
+    "five": "5", "six": "6", "seven": "7", "eight": "8",
+    "nine": "9", "ten": "10", "eleven": "11", "twelve": "12",
+    "thirteen": "13", "fourteen": "14", "fifteen": "15",
+    "sixteen": "16", "seventeen": "17", "eighteen": "18",
+    "nineteen": "19", "twenty": "20", "thirty": "30",
+    "forty": "40", "forty-five": "45", "fifty": "50",
+    "sixty": "60", "ninety": "90", "hundred": "100",
+    "half": "30", "quarter": "15",
+  };
+
+  let result = text.toLowerCase();
+
+  // handle "an hour" → "1 hour"
+  result = result.replace(/\ban\s+hour/gi, "1 hour");
+  result = result.replace(/\ba\s+hour/gi, "1 hour");
+  result = result.replace(/\ban\s+minute/gi, "1 minute");
+
+  // handle "twenty five" → "25", "thirty minutes" etc
+  result = result.replace(
+    /\b(twenty|thirty|forty|fifty)\s+(one|two|three|four|five|six|seven|eight|nine)\b/gi,
+    (_, tens, ones) => {
+      const t = map[tens.toLowerCase()] || tens;
+      const o = map[ones.toLowerCase()] || ones;
+      return String(parseInt(t) + parseInt(o));
+    }
+  );
+
+  // replace single word numbers
+  Object.entries(map).forEach(([word, digit]) => {
+    const regex = new RegExp(`\\b${word}\\b`, "gi");
+    result = result.replace(regex, digit);
+  });
+
+  return result;
+}
+
 async function recordAudio(ms: number): Promise<string> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const mediaRecorder = new MediaRecorder(stream);
@@ -68,20 +107,33 @@ async function recordAudio(ms: number): Promise<string> {
   });
 }
 
-// ── Speak and wait until finished with buffer ──
 function speakAndWait(text: string): Promise<void> {
   return new Promise((resolve) => {
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.85;
-    utterance.pitch = 1;
-    utterance.onend = () => setTimeout(() => resolve(), 800);
-    utterance.onerror = () => setTimeout(() => resolve(), 800);
-    speechSynthesis.speak(utterance);
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+      setTimeout(() => doSpeak(text, resolve), 300);
+    } else {
+      doSpeak(text, resolve);
+    }
   });
 }
 
-// ── Format time for display ──
+function doSpeak(text: string, resolve: () => void) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.85;
+  utterance.pitch = 1;
+  utterance.onend = () => setTimeout(() => resolve(), 800);
+  utterance.onerror = () => setTimeout(() => resolve(), 800);
+  speechSynthesis.speak(utterance);
+}
+
+function safeSpeakOnce(text: string) {
+  if (speechSynthesis.speaking) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.85;
+  speechSynthesis.speak(u);
+}
+
 function formatTime(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60).toString().padStart(2, "0");
@@ -89,7 +141,6 @@ function formatTime(sec: number): string {
   return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
 }
 
-// ── Format time for speaking ──
 function formatTimeSpeak(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -98,9 +149,31 @@ function formatTimeSpeak(sec: number): string {
   const parts: string[] = [];
   if (h > 0) parts.push(`${h} hour${h > 1 ? "s" : ""}`);
   if (m > 0) parts.push(`${m} minute${m > 1 ? "s" : ""}`);
-  if (s > 0 && h === 0) parts.push(`${s} second${s > 1 ? "s" : ""}`);
+  if (s > 0 && h === 0 && m === 0) parts.push(`${s} second${s > 1 ? "s" : ""}`);
 
-  return parts.length > 0 ? parts.join(" and ") : "0 seconds";
+  return parts.length > 0 ? parts.join(" and ") : "less than a second";
+}
+
+function stripDuration(text: string): string {
+  return text
+    .replace(/\bfor\s+\d+\s*(?:hours?|hrs?|hour|minutes?|mins?|min)\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+// ── Extract duration — handles digits AND word numbers ──
+function extractDuration(text: string): number {
+  // first convert word numbers to digits
+  const converted = wordsToNumbers(text);
+
+  const hourMatch = converted.match(/(\d+)\s*(?:hours?|hrs?|hour)\b/i);
+  const minMatch = converted.match(/(\d+)\s*(?:minutes?|mins?|min)\b/i);
+
+  let seconds = 0;
+  if (hourMatch) seconds += parseInt(hourMatch[1]) * 3600;
+  if (minMatch) seconds += parseInt(minMatch[1]) * 60;
+
+  return seconds;
 }
 
 export default function ProductivityMode({ onBack }: ProductivityModeProps) {
@@ -125,6 +198,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
   const timerRunningRef = useRef(false);
   const performanceRef = useRef<PerformanceEntry[]>([]);
   const startTimeRef = useRef(Date.now());
+  const allTasksDoneRef = useRef(false);
 
   useEffect(() => { tasksRef.current = tasks; }, [tasks]);
   useEffect(() => { currentTaskRef.current = currentTaskIndex; }, [currentTaskIndex]);
@@ -151,7 +225,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     setStatus("Speaking...");
 
     await speakAndWait(
-      "Welcome to Productivity Mode. Please tell me all your tasks for today. For example: Study maths for 30 minutes, exercise for 20 minutes, read a book for 1 hour. You have 20 seconds to speak."
+      "Welcome to Productivity Mode. Please tell me all your tasks for today. For example: Study maths for one hour, exercise for thirty minutes, read a book for two hours. You have 20 seconds to speak."
     );
 
     setStatus("Listening... Speak all your tasks now");
@@ -170,17 +244,21 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
   // ══════════════════════════════════════════
   // STEP 2 — Parse tasks
   // ══════════════════════════════════════════
-  async function parseTasks(text: string) {
+  async function parseTasks(rawText: string) {
     setStatus("Processing tasks...");
+
+    // ✅ Convert word numbers first before any parsing
+    const text = wordsToNumbers(rawText);
 
     const cleaned = text
       .replace(/these are my tasks for the day/gi, "")
       .replace(/that's all/gi, "")
       .trim();
 
+    // ✅ Regex now catches both digit and already-converted word numbers
     const durationMatches = Array.from(
       cleaned.matchAll(
-        /[^,;.?!\n]+?\bfor\b\s*\d+\s*(?:hours?|hrs?|minutes?|mins?)\b/gi
+        /[^,;.?!\n]+?\bfor\b\s*\d+\s*(?:hours?|hrs?|hour|minutes?|mins?|min)\b/gi
       )
     ).map((m) => m[0].trim());
 
@@ -203,7 +281,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     const parsed: Task[] = parts.map((t, i) => ({
       id: i + 1,
       text: t.charAt(0).toUpperCase() + t.slice(1),
-      duration: extractDuration(t),
+      duration: extractDuration(t), // ✅ already converted text
       done: null,
       timeSpent: 0,
     }));
@@ -211,10 +289,11 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     tasksRef.current = parsed;
     setTasks(parsed);
 
+    // read back task names with durations
     const summary = parsed
       .map(
         (t) =>
-          `Task ${t.id}: ${t.text}${t.duration > 0 ? `, ${formatTimeSpeak(t.duration)}` : ""}`
+          `Task ${t.id}: ${stripDuration(t.text)}${t.duration > 0 ? `, ${formatTimeSpeak(t.duration)}` : ""}`
       )
       .join(". ");
 
@@ -245,7 +324,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       lower.includes("okay")
     ) {
       await speakAndWait(
-        "Tell me your reminders. For example: remind me in 30 minutes to drink water, remind me in 1 hour to take a break. You have 15 seconds."
+        "Tell me your reminders. For example: remind me in thirty minutes to drink water, remind me in one hour to take a break. You have 15 seconds."
       );
 
       setStatus("Listening...");
@@ -264,7 +343,8 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
   // ══════════════════════════════════════════
   // PARSE REMINDERS
   // ══════════════════════════════════════════
-  function parseReminders(text: string) {
+  function parseReminders(rawText: string) {
+    const text = wordsToNumbers(rawText);
     const parts = text
       .split(/remind me|reminder/gi)
       .filter((p) => p.trim().length > 3);
@@ -272,8 +352,8 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     const parsed: Reminder[] = [];
 
     parts.forEach((part) => {
-      const minMatch = part.match(/(\d+)\s*min/i);
-      const hourMatch = part.match(/(\d+)\s*hour/i);
+      const minMatch = part.match(/(\d+)\s*(?:minutes?|mins?|min)\b/i);
+      const hourMatch = part.match(/(\d+)\s*(?:hours?|hrs?|hour)\b/i);
       const toMatch = part.match(/to\s+(.+?)(?:,|$)/i);
 
       let minutes = 0;
@@ -293,24 +373,13 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     });
 
     setReminders(parsed);
-
-    if (parsed.length > 0) {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(
-        `${parsed.length} reminder${parsed.length > 1 ? "s" : ""} set.`
-      );
-      u.rate = 0.85;
-      speechSynthesis.speak(u);
-    }
   }
 
   // ══════════════════════════════════════════
   // STEP 4 — Begin each task
   // ══════════════════════════════════════════
   async function beginTask(parsed: Task[], index: number) {
-    if (index >= parsed.length) {
-      return allTasksDone();
-    }
+    if (index >= parsed.length) return;
 
     setScreen("tasks");
     setCurrentTaskIndex(index);
@@ -325,11 +394,11 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
 
     const durationText =
       task.duration > 0
-        ? `This task has a timer of ${formatTimeSpeak(task.duration)}.`
+        ? `Timer set for ${formatTimeSpeak(task.duration)}.`
         : "No duration detected. A stopwatch will run.";
 
     await speakAndWait(
-      `Task ${task.id}: ${task.text}. ${durationText} Say yes to start the timer or say no to skip.`
+      `Task ${task.id}: ${stripDuration(task.text)}. ${durationText} Say yes to start the timer or say no to skip.`
     );
 
     startListening();
@@ -344,11 +413,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       (window as any).webkitSpeechRecognition;
 
     if (!SR) {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(
-        "Continuous voice not supported. Please use Chrome."
-      );
-      speechSynthesis.speak(u);
+      speakAndWait("Continuous voice not supported. Please use Chrome.");
       return;
     }
 
@@ -402,6 +467,32 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
   function handleCommand(cmd: string) {
     const index = currentTaskRef.current;
     const task = tasksRef.current[index];
+
+    // GO BACK
+    if (
+      cmd.includes("go back") ||
+      cmd.includes("mode selection") ||
+      cmd.includes("go to mode") ||
+      cmd.includes("back to mode")
+    ) {
+      stopListening();
+      if (timerRef.current) clearInterval(timerRef.current);
+      speechSynthesis.cancel();
+      onBack();
+      return;
+    }
+
+    // PERFORMANCE
+    if (
+      cmd.includes("performance") ||
+      cmd.includes("analysis") ||
+      cmd.includes("how did i do") ||
+      cmd.includes("progress")
+    ) {
+      readPerformance();
+      return;
+    }
+
     if (!task) return;
 
     // YES — start timer
@@ -413,24 +504,23 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       !timerRunningRef.current
     ) {
       startTimer(task.duration);
-      speechSynthesis.cancel();
-      const msg =
-        task.duration > 0
-          ? `Timer started. You have ${formatTimeSpeak(task.duration)} for Task ${task.id}. Say done when finished.`
-          : `Stopwatch started for Task ${task.id}. Say done when finished.`;
-      const u = new SpeechSynthesisUtterance(msg);
-      u.rate = 0.85;
-      speechSynthesis.speak(u);
+      setTimeout(() => {
+        safeSpeakOnce(
+          task.duration > 0
+            ? `Timer started. Say done when finished.`
+            : `Stopwatch started. Say done when finished.`
+        );
+      }, 200);
       return;
     }
 
-    // DONE — complete task
+    // DONE
     if (cmd.includes("done") && !cmd.includes("not done")) {
       finishTask(index, true);
       return;
     }
 
-    // NOT DONE / NO / SKIP
+    // NOT DONE / SKIP
     if (
       cmd.includes("not done") ||
       cmd.includes("skip") ||
@@ -443,31 +533,14 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     // PAUSE
     if (cmd.includes("pause")) {
       pauseTimer();
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance("Timer paused.");
-      u.rate = 0.85;
-      speechSynthesis.speak(u);
+      safeSpeakOnce("Timer paused.");
       return;
     }
 
     // RESUME
     if (cmd.includes("resume") || cmd.includes("continue")) {
       resumeTimer(task.duration);
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance("Timer resumed.");
-      u.rate = 0.85;
-      speechSynthesis.speak(u);
-      return;
-    }
-
-    // PERFORMANCE ANALYSIS
-    if (
-      cmd.includes("performance") ||
-      cmd.includes("analysis") ||
-      cmd.includes("how did i do") ||
-      cmd.includes("progress")
-    ) {
-      readPerformance();
+      safeSpeakOnce("Timer resumed.");
       return;
     }
   }
@@ -492,12 +565,11 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
           clearInterval(timerRef.current!);
           setTimerRunning(false);
           timerRunningRef.current = false;
-          speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(
-            `Time is up for Task ${currentTaskRef.current + 1}. Say done if completed, or not done to mark as incomplete.`
-          );
-          u.rate = 0.85;
-          speechSynthesis.speak(u);
+          setTimeout(() => {
+            safeSpeakOnce(
+              `Time is up for Task ${currentTaskRef.current + 1}. Say done if completed, or not done to mark as incomplete.`
+            );
+          }, 300);
         }
 
         return next;
@@ -525,12 +597,9 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
           clearInterval(timerRef.current!);
           setTimerRunning(false);
           timerRunningRef.current = false;
-          speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(
-            "Time is up. Say done or not done."
-          );
-          u.rate = 0.85;
-          speechSynthesis.speak(u);
+          setTimeout(() => {
+            safeSpeakOnce("Time is up. Say done or not done.");
+          }, 300);
         }
 
         return next;
@@ -567,15 +636,12 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     setTimerSeconds(0);
     timerSecondsRef.current = 0;
 
-    speechSynthesis.cancel();
     const resultMsg = completed
       ? `Great job! Task ${task.id} completed in ${formatTimeSpeak(spent)}.`
       : `Task ${task.id} skipped. Time spent: ${formatTimeSpeak(spent)}.`;
-    const u = new SpeechSynthesisUtterance(resultMsg);
-    u.rate = 0.85;
-    speechSynthesis.speak(u);
 
     const nextIndex = index + 1;
+    const allFinished = updated.every((t) => t.done !== null);
 
     if (nextIndex < updated.length) {
       setCurrentTaskIndex(nextIndex);
@@ -588,13 +654,20 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
           nextTask.duration > 0
             ? `Timer set for ${formatTimeSpeak(nextTask.duration)}.`
             : "Stopwatch will run.";
+
+        await speakAndWait(resultMsg);
         await speakAndWait(
-          `Moving to Task ${nextTask.id}: ${nextTask.text}. ${durationText} Say yes to start or no to skip.`
+          `Moving to Task ${nextTask.id}: ${stripDuration(nextTask.text)}. ${durationText} Say yes to start or no to skip.`
         );
         startListening();
-      }, 2500);
-    } else {
-      setTimeout(() => allTasksDone(), 2500);
+      }, 500);
+
+    } else if (allFinished && !allTasksDoneRef.current) {
+      allTasksDoneRef.current = true;
+      setTimeout(async () => {
+        await speakAndWait(resultMsg);
+        allTasksDone();
+      }, 500);
     }
   }
 
@@ -604,13 +677,11 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
   function allTasksDone() {
     setScreen("done");
     stopListening();
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(
-      "You have completed all tasks for today! Say performance analysis to hear your results."
-    );
-    u.rate = 0.85;
-    speechSynthesis.speak(u);
-    setTimeout(() => startListening(), 5000);
+    speakAndWait(
+      "You have completed all tasks for today. Say performance analysis to hear your results, or say go back to mode selection to return."
+    ).then(() => {
+      startListening();
+    });
   }
 
   // ══════════════════════════════════════════
@@ -620,12 +691,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     const perf = performanceRef.current;
 
     if (perf.length === 0) {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(
-        "No performance data yet. Complete at least one task first."
-      );
-      u.rate = 0.85;
-      speechSynthesis.speak(u);
+      safeSpeakOnce("No performance data yet. Complete at least one task first.");
       return;
     }
 
@@ -644,7 +710,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       sentences.push("Here are your completed tasks.");
       completed.forEach((p, i) => {
         sentences.push(
-          `Task ${i + 1}: ${p.task}. Finished in ${formatTimeSpeak(p.actual)}.`
+          `Task ${i + 1}: ${stripDuration(p.task)}. Finished in ${formatTimeSpeak(p.actual)}.`
         );
       });
     }
@@ -653,7 +719,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       sentences.push("Pending or skipped tasks.");
       pending.forEach((p) => {
         sentences.push(
-          `${p.task}. Time spent: ${formatTimeSpeak(p.actual)}.`
+          `${stripDuration(p.task)}. Time spent: ${formatTimeSpeak(p.actual)}.`
         );
       });
     }
@@ -666,20 +732,22 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       sentences.push("Do not worry. Tomorrow is a new opportunity.");
     }
 
-    speechSynthesis.cancel();
+    sentences.push(
+      "Say go back to mode selection to return to the main menu."
+    );
 
-    // speak sentence by sentence with pause between each
+    speechSynthesis.cancel();
     let i = 0;
+
     function speakNext() {
       if (i >= sentences.length) return;
       const u = new SpeechSynthesisUtterance(sentences[i]);
       u.rate = 0.85;
-      u.onend = () => {
-        i++;
-        setTimeout(speakNext, 500);
-      };
+      u.onend = () => { i++; setTimeout(speakNext, 500); };
+      u.onerror = () => { i++; setTimeout(speakNext, 500); };
       speechSynthesis.speak(u);
     }
+
     speakNext();
   }
 
@@ -693,10 +761,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
       setReminders((prev) =>
         prev.map((r) => {
           if (!r.triggered && elapsed >= r.triggerMinutes) {
-            speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(`Reminder: ${r.text}`);
-            u.rate = 0.85;
-            speechSynthesis.speak(u);
+            safeSpeakOnce(`Reminder: ${r.text}`);
             return { ...r, triggered: true };
           }
           return r;
@@ -705,23 +770,8 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     }, 30000);
   }
 
-  // ══════════════════════════════════════════
-  // HELPERS
-  // ══════════════════════════════════════════
-  function extractDuration(text: string): number {
-    const hourMatch = text.match(/(\d+)\s*(?:hours?|hrs?)\b/i);
-    const minMatch = text.match(/(\d+)\s*(?:minutes?|mins?)\b/i);
-    let seconds = 0;
-    if (hourMatch) seconds += parseInt(hourMatch[1]) * 3600;
-    if (minMatch) seconds += parseInt(minMatch[1]) * 60;
-    return seconds;
-  }
-
   const currentTask = tasks[currentTaskIndex];
 
-  // ══════════════════════════════════════════
-  // SCREEN: PLAN INPUT
-  // ══════════════════════════════════════════
   if (screen === "plan") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white px-6">
@@ -758,9 +808,6 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     );
   }
 
-  // ══════════════════════════════════════════
-  // SCREEN: REMINDER INPUT
-  // ══════════════════════════════════════════
   if (screen === "reminders") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white px-6">
@@ -788,14 +835,10 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
     );
   }
 
-  // ══════════════════════════════════════════
-  // SCREEN: ALL DONE
-  // ══════════════════════════════════════════
   if (screen === "done") {
     return (
       <div className="min-h-screen bg-black text-white px-6 py-8">
         <div className="max-w-4xl mx-auto flex flex-col gap-6">
-
           <div className="flex justify-between items-center">
             <h1 className="text-[48px] font-bold" style={{ fontFamily: "Neuton, serif" }}>
               Productivity Mode
@@ -814,7 +857,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
               🎉 All tasks completed!
             </p>
             <p className="text-gray-300 mt-3 text-[18px]">
-              Say "performance analysis" or tap the button below.
+              Say "performance analysis" or tap below. Say "go back to mode selection" to return.
             </p>
             <div className="flex items-center justify-center gap-3 mt-4">
               <Mic
@@ -833,18 +876,14 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
               {tasks.map((task) => (
                 <div key={task.id} className="flex justify-between items-center border border-gray-700 rounded-lg p-4">
                   <div>
-                    <p className="font-bold text-[#FFD700]" style={{ fontFamily: "Neuton, serif" }}>
-                      Task {task.id}
-                    </p>
+                    <p className="font-bold text-[#FFD700]" style={{ fontFamily: "Neuton, serif" }}>Task {task.id}</p>
                     <p
                       className={task.done === true ? "line-through text-gray-500" : task.done === false ? "text-red-400" : "text-white"}
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
                       {task.text}
                     </p>
-                    <p className="text-gray-400 text-[14px]">
-                      Time spent: {formatTimeSpeak(task.timeSpent)}
-                    </p>
+                    <p className="text-gray-400 text-[14px]">Time spent: {formatTimeSpeak(task.timeSpent)}</p>
                   </div>
                   <div>
                     {task.done === true && <CheckCircle className="text-green-500" size={28} />}
@@ -870,15 +909,11 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
           >
             <ArrowLeft size={22} /> Back to Mode Selection
           </button>
-
         </div>
       </div>
     );
   }
 
-  // ══════════════════════════════════════════
-  // SCREEN: TASKS DASHBOARD
-  // ══════════════════════════════════════════
   return (
     <div className="min-h-screen bg-black text-white px-6 py-8">
       <div className="max-w-4xl mx-auto flex flex-col gap-6">
@@ -907,9 +942,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
             size={26}
           />
           <div>
-            <p className="text-[18px]" style={{ fontFamily: "Inter, sans-serif" }}>
-              Status: {status}
-            </p>
+            <p className="text-[18px]" style={{ fontFamily: "Inter, sans-serif" }}>Status: {status}</p>
             {transcript && (
               <p className="text-gray-400 text-[13px]">Heard: "{transcript}"</p>
             )}
@@ -988,9 +1021,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
                     {task.text}
                   </p>
                   {task.timeSpent > 0 && (
-                    <p className="text-gray-400 text-[13px]">
-                      Time: {formatTimeSpeak(task.timeSpent)}
-                    </p>
+                    <p className="text-gray-400 text-[13px]">Time: {formatTimeSpeak(task.timeSpent)}</p>
                   )}
                 </div>
                 <div>
@@ -1043,7 +1074,7 @@ export default function ProductivityMode({ onBack }: ProductivityModeProps) {
             <span>❌ "not done" / "no" → Skip</span>
             <span>⏸️ "pause" / "resume"</span>
             <span>📊 "performance analysis"</span>
-            <span>🔙 "go back" → Exit</span>
+            <span>🔙 "go back to mode selection"</span>
           </div>
         </div>
 
