@@ -1,4 +1,3 @@
-<div align="center">
 EchoEd
 Learning Assistant for Visually Impaired
 A fully voice-navigated AI platform that lets blind and visually impaired users learn, research, and stay productive — entirely through speech.
