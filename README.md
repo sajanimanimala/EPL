@@ -1,4 +1,6 @@
-EchoEd
+##EchoEd<div align="center">
+
+
 Learning Assistant for Visually Impaired
 A fully voice-navigated AI platform that lets blind and visually impaired users learn, research, and stay productive — entirely through speech.
 ---
@@ -23,7 +25,7 @@ Voice Command Reference
 Project Structure
 SDLC Journey
 ---
-Product Overview
+## PRODUCT OVERVIEW:
 EchoEd is a voice-first AI learning assistant built for blind and visually impaired individuals. It requires no screen reading, no keyboard navigation, and no button presses. Every interaction — from selecting a mode to answering a quiz question to bookmarking a research paper — is driven entirely by the user's spoken voice.
 The platform is built around three core modes:
 Learning Mode — Ask EchoEd to explain any topic, test yourself with AI-generated recall questions, or teach a concept back and receive personalised feedback. All powered by Gemini AI, all navigated by voice.
@@ -31,14 +33,14 @@ Research Mode — Speak a research topic and EchoEd searches Google Scholar and 
 Productivity Mode — Manage your day through voice: read daily plans, start focus timers, set reminders, schedule revision sessions, and track learning performance over time.
 EchoEd is designed for two overlapping user groups: fully blind users who rely entirely on audio output, and partially sighted users who benefit from the high-contrast, large-text visual interface that mirrors what the voice is saying.
 ---
-UN SDG Global Impact
+#UN SDG Global Impact
 Goal	Alignment
 SDG 3 — Good Health & Well-Being	Promotes mental well-being and cognitive independence for visually impaired individuals by reducing reliance on sighted assistance for everyday learning tasks
 SDG 4 — Quality Education	Provides equitable access to AI-powered education tools for a population historically excluded from standard EdTech platforms. Voice-driven quizzing, explanation, and research tools democratise self-directed learning
 SDG 10 — Reduced Inequalities	Directly addresses the digital accessibility gap. Blind users gain access to the same quality of AI learning tools available to sighted users, with no compromise in capability
 > An estimated **253 million people** worldwide live with vision impairment (WHO, 2023). EchoEd is built for them.
 ---
-Features
+#Features
 🎙️ Learning Mode
 Explanation Mode — Say any topic; Gemini generates a clear 3–4 sentence spoken explanation
 Active Recall — AI generates 3 questions on your topic; answer by voice and get immediate spoken feedback per answer
@@ -62,7 +64,7 @@ All text at minimum 20px
 Live status indicator: Speaking / Listening / Thinking / Ready
 Visual feedback mirrors exactly what the voice is saying
 ---
-System Architecture
+#System Architecture
 Voice Interaction Flow
 ```mermaid
 flowchart TD
