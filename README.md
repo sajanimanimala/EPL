@@ -1,310 +1,122 @@
+<div align="center">
+
 # 🎙️ EchoEd
+### AI-Powered Learning Assistant for the Visually Impaired
 
-### Learning Assistant for the Visually Impaired
+*A fully voice-navigated AI platform that enables blind and visually impaired users to learn, research, and stay productive through speech alone.*
 
-*A fully voice-navigated AI platform that enables blind and visually impaired users to learn, research, and stay productive entirely through speech.*
+[![SDG 3](https://img.shields.io/badge/UN%20SDG-3%20Good%20Health-4C9F38?style=for-the-badge)](https://sdgs.un.org/goals/goal3)
+[![SDG 4](https://img.shields.io/badge/UN%20SDG-4%20Quality%20Education-C5192D?style=for-the-badge)](https://sdgs.un.org/goals/goal4)
+[![SDG 10](https://img.shields.io/badge/UN%20SDG-10%20Reduced%20Inequalities-DD1367?style=for-the-badge)](https://sdgs.un.org/goals/goal10)
+
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi)
+![Gemini](https://img.shields.io/badge/Gemini-AI-4285F4?logo=google)
+![Whisper](https://img.shields.io/badge/Whisper-STT-412991?logo=openai)
+
+</div>
 
 ---
 
-## 🌟 Overview
+## 📖 Overview
 
-EchoEd is a voice-first AI learning assistant designed specifically for blind and visually impaired individuals. Unlike traditional educational platforms, EchoEd removes the need for screen readers, keyboards, and mouse interactions.
+EchoEd is a voice-first AI learning assistant designed specifically for blind and visually impaired users. Unlike traditional educational platforms, EchoEd eliminates the need for screen readers, keyboards, or touch interactions.
 
-Every interaction is controlled through voice commands, allowing users to:
+Every feature is controlled through voice commands, allowing users to:
 
-* Learn new concepts
-* Conduct academic research
-* Manage productivity tasks
-* Receive AI-generated feedback
-* Navigate the entire application hands-free
+- Learn new concepts
+- Conduct academic research
+- Manage daily productivity tasks
+- Receive AI-generated feedback
+- Navigate the entire application hands-free
 
 ---
 
 ## 🌍 UN Sustainable Development Goals
 
-### SDG 3 – Good Health & Well-Being
-
-Promotes cognitive independence and mental well-being by reducing reliance on sighted assistance.
-
-### SDG 4 – Quality Education
-
-Provides equitable access to AI-powered educational tools through voice-first learning experiences.
-
-### SDG 10 – Reduced Inequalities
-
-Bridges the accessibility gap by offering advanced AI capabilities to visually impaired users.
+| Goal | Contribution |
+|--------|-------------|
+| SDG 3 – Good Health & Well-Being | Supports cognitive independence and mental well-being |
+| SDG 4 – Quality Education | Provides accessible AI-powered learning opportunities |
+| SDG 10 – Reduced Inequalities | Reduces the digital accessibility gap for visually impaired users |
 
 ---
 
-## ✨ Features
+# ✨ Features
 
-### 🎓 Learning Mode
+## 🎙️ Learning Mode
 
-#### Explanation Mode
-
+### Explanation Mode
 Ask any topic and receive a concise AI-generated explanation.
 
-#### Active Recall
+### Active Recall
+Generate voice-based quiz questions and receive instant feedback.
 
-Generate voice-based quiz questions and receive immediate spoken feedback.
-
-#### Teach Me Back
-
-Explain a concept aloud and receive personalised evaluation from the AI assistant.
+### Teach Me Back
+Explain a concept aloud and receive personalised evaluation.
 
 ---
 
-### 🔬 Research Mode
+## 🔬 Research Mode
 
-* Search academic papers using Gemini AI
-* Explore recent research topics
-* Read abstracts and conclusions aloud
-* Voice-controlled paper navigation
-* Highlight and save important content
-* Review saved highlights anytime
+- Search academic papers using Gemini AI
+- Read abstracts and conclusions aloud
+- Voice-controlled paper navigation
+- Save important sentences using the **"highlight"** command
+- Review saved highlights anytime
 
 ---
 
-### ⚡ Productivity Mode
+## ⚡ Productivity Mode
 
-#### Daily Planner
+### Daily Planner
+Navigate daily tasks entirely by voice.
 
-Navigate daily schedules through voice commands.
+### Focus Timer
+Start timers using natural language commands.
 
-#### Focus Timer
-
-Start and manage focus sessions using speech.
-
-#### Smart Reminders
-
+### Smart Reminders
 Create reminders with spoken instructions.
 
-#### Revision Scheduler
+### Revision Scheduler
+Automatically schedule spaced repetition sessions.
 
-Automatically schedule revision sessions using spaced repetition principles.
-
-#### Performance Tracker
-
-Track learning progress and assessment performance.
+### Performance Tracking
+Track quiz scores and learning progress.
 
 ---
 
-### ♿ Accessibility Features
+## ♿ Accessibility Features
 
-* Fully voice-controlled interface
-* High-contrast user interface
-* Large and readable typography
-* Real-time status indicators
-* Audio feedback for all interactions
-* No keyboard or mouse required
-
----
-
-## 🏗️ System Architecture
-
-### Voice Interaction Flow
-
-```text
-User Speech
-      │
-      ▼
-Microphone Capture
-      │
-      ▼
-FastAPI Backend
-      │
-      ▼
-faster-whisper STT
-      │
-      ▼
-Transcript Processing
-      │
-      ▼
-Intent Detection
-      │
- ┌────┼────┐
- ▼    ▼    ▼
-Learning Research Productivity
-      │
-      ▼
-Gemini AI Processing
-      │
-      ▼
-Text-to-Speech
-      │
-      ▼
-Audio Response
-```
+- Voice-first interaction
+- High-contrast UI
+- Large readable typography
+- Audio feedback for every action
+- Real-time status indicators
+- No keyboard or mouse required
 
 ---
 
-## 🛠️ Technology Stack
+# 🏗️ System Architecture
 
-| Layer          | Technology            |
-| -------------- | --------------------- |
-| Frontend       | React 18 + TypeScript |
-| Styling        | Tailwind CSS          |
-| Backend        | FastAPI               |
-| Speech-to-Text | faster-whisper        |
-| Text-to-Speech | Web Speech API        |
-| AI Engine      | Gemini 2.0 Flash      |
-| Icons          | Lucide React          |
+## Voice Interaction Flow
 
----
+```mermaid
+flowchart TD
+A([User Speaks]) --> B[Microphone Capture]
+B --> C[FastAPI Backend]
+C --> D[faster-whisper]
+D --> E[Transcript]
+E --> F[Intent Detection]
+F --> G[Learning Mode]
+F --> H[Research Mode]
+F --> I[Productivity Mode]
+G --> J[Gemini AI]
+H --> J
+I --> J
+J --> K[Text To Speech]
+K --> L([User Hears Response])
 
-## 🚀 Installation
 
-### Prerequisites
-
-* Node.js 18+
-* Python 3.9+
-* Gemini API Key
-* Working Microphone
-
-### Clone Repository
-
-```bash
-git clone <repository-url>
-cd EPL
-```
-
-### Install Frontend Dependencies
-
-```bash
-npm install
-```
-
-### Configure Gemini API Key
-
-Update:
-
-```ts
-const GEMINI_API_KEY = "YOUR_API_KEY";
-```
-
-in:
-
-```text
-src/services/geminiLearning.ts
-```
-
-### Backend Setup
-
-```bash
-cd backend
-
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-pip install -r requirements.txt
-```
-
-### Run Backend
-
-```bash
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
-```
-
-### Run Frontend
-
-```bash
-npm run dev
-```
-
-Open:
-
-```text
-http://localhost:5173
-```
-
----
-
-## 🎤 Voice Commands
-
-### Mode Selection
-
-| Command      | Action                 |
-| ------------ | ---------------------- |
-| productivity | Open Productivity Mode |
-| learning     | Open Learning Mode     |
-| research     | Open Research Mode     |
-
-### Learning Commands
-
-| Command       | Action                      |
-| ------------- | --------------------------- |
-| explanation   | Start Explanation Mode      |
-| recall        | Start Active Recall         |
-| teach me back | Start Teach Me Back         |
-| again         | Repeat previous explanation |
-| menu          | Return to Learning Menu     |
-
-### Research Commands
-
-| Command       | Action                |
-| ------------- | --------------------- |
-| paper one     | Open first paper      |
-| paper two     | Open second paper     |
-| paper three   | Open third paper      |
-| highlight     | Save current sentence |
-| my highlights | Read saved highlights |
-
-### Productivity Commands
-
-| Command           | Action                   |
-| ----------------- | ------------------------ |
-| read my plan      | Read today's tasks       |
-| start focus timer | Start timer              |
-| set a reminder    | Create reminder          |
-| schedule revision | Schedule revision        |
-| how am I doing    | Read performance summary |
-
----
-
-## 📁 Project Structure
-
-```text
-EPL/
-├── backend/
-│   ├── main.py
-│   └── requirements.txt
-│
-├── src/
-│   ├── components/
-│   ├── hooks/
-│   ├── services/
-│   ├── styles/
-│   ├── App.tsx
-│   └── main.tsx
-│
-└── README.md
-```
-
----
-
-## 🔄 SDLC Journey
-
-### Week 1
-
-Requirements gathering, accessibility research, and architecture planning.
-
-### Week 2
-
-Implementation of Learning Mode and Research Mode.
-
-### Week 3
-
-Improved reliability, error handling, and speech processing.
-
-### Week 4
-
-Code refactoring, Productivity Mode development, and final polishing.
-
----
-
-## ❤️ Team EchoEd
-
-**Technology should work for everyone — not just those who can see the screen.**
 
