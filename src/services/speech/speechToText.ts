@@ -1,4 +1,4 @@
-export async function recordAndSendAudio() {
+export async function recordAndSendAudio(durationMs = 4000) {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: true,
   });
@@ -38,6 +38,6 @@ export async function recordAndSendAudio() {
 
     setTimeout(() => {
       mediaRecorder.stop();
-    }, 4000);
+    }, durationMs);
   });
 }

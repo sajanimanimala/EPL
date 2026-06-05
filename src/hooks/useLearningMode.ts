@@ -102,9 +102,9 @@ export function useLearningMode(onBack?: () => void) {
     await delay(300);
   }
 
-  async function listen(): Promise<string> {
+  async function listen(durationMs = 4000): Promise<string> {
     setStatus("listening");
-    const result = await recordAndSendAudio();
+    const result = await recordAndSendAudio(durationMs);
     return (result ?? "").trim().toLowerCase();
   }
 
@@ -255,7 +255,7 @@ export function useLearningMode(onBack?: () => void) {
     if (!normalized) return -1;
 
     const normalizedTokens = normalized.replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
-    const firstToken = normalizedTokens[0] ?? "";
+    const joined = normalizedTokens.join(" ");
     const letterMap: Record<string, number> = {
       a: 0,
       b: 1,
@@ -265,6 +265,10 @@ export function useLearningMode(onBack?: () => void) {
       "option b": 1,
       "option c": 2,
       "option d": 3,
+      "choice a": 0,
+      "choice b": 1,
+      "choice c": 2,
+      "choice d": 3,
       first: 0,
       second: 1,
       third: 2,
@@ -275,20 +279,21 @@ export function useLearningMode(onBack?: () => void) {
       four: 3,
     };
 
-    if (letterMap[firstToken] !== undefined) {
-      const index = letterMap[firstToken];
-      return options[index] ? index : -1;
+    const directIndex = letterMap[joined] ?? letterMap[normalizedTokens[0] ?? ""];
+    if (directIndex !== undefined && options[directIndex]) return directIndex;
+
+    const lastToken = normalizedTokens[normalizedTokens.length - 1] ?? "";
+    const lastTokenIndex = letterMap[lastToken];
+    if (lastTokenIndex !== undefined && options[lastTokenIndex]) return lastTokenIndex;
+
+    const ordinalToken = normalizedTokens.find((token) => letterMap[token] !== undefined);
+    if (ordinalToken && options[letterMap[ordinalToken] ?? -1]) {
+      return letterMap[ordinalToken] ?? -1;
     }
 
-    const join = normalizedTokens.join(" ");
     for (let index = 0; index < options.length; index++) {
-      if (options[index].toLowerCase() === join) {
-        return index;
-      }
-    }
-
-    for (let index = 0; index < options.length; index++) {
-      if (join.includes(options[index].toLowerCase())) {
+      const optionText = options[index].toLowerCase().replace(/[^a-z0-9 ]/g, " ");
+      if (joined === optionText || joined.includes(optionText) || optionText.includes(joined)) {
         return index;
       }
     }
@@ -381,7 +386,7 @@ export function useLearningMode(onBack?: () => void) {
     setSubMode("teach");
     setTeachState({ topic: "", feedback: "" });
 
-    await say("Teach Me Back. Say the topic you want to teach.");
+    await say("Teach Me Back. What is the topic you want to teach?");
 
     const topic = await listen();
     if (isGoBackCommand(topic)) {
@@ -413,11 +418,11 @@ export function useLearningMode(onBack?: () => void) {
 
     await say(
       `Your topic is ${topic}. ` +
-      "Explain it back to me in your own words, as if you're teaching someone " +
-      "who has never heard of it. Speak now, you have about four seconds."
+      "Please summarize or explain it in your own words for up to two minutes. " +
+      "Speak now, and I will tell you whether your explanation is relevant to the topic."
     );
 
-    const studentExplanation = await listen();
+    const studentExplanation = await listen(120000);
     if (isGoBackCommand(studentExplanation)) {
       exitRequestedRef.current = true;
       exitToModeSelection(onBackRef.current, setStatus, isRunning);
