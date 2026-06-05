@@ -3,13 +3,12 @@
 // UI exists only as visual feedback for partially sighted users.
 // Every action is triggered by listening to and parsing the user's speech.
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, Dispatch, SetStateAction } from "react";
 import { speak } from "../services/speech/textToSpeech";
 import { recordAndSendAudio } from "../services/speech/speechToText";
 import {
   generateExplanation,
   generateRecallQuestions,
-  evaluateRecallAnswer,
   evaluateTeachBack,
   RecallQuestion,
 } from "../services/geminiLearning";
@@ -29,6 +28,7 @@ export interface RecallState {
   questions: RecallQuestion[];
   currentIndex: number;
   feedback: string;
+  score: number;
   isComplete: boolean;
 }
 
@@ -49,12 +49,31 @@ function detectSubMode(speech: string): SubMode | null {
   return null;
 }
 
+function isGoBackCommand(speech: string) {
+  const s = speech.toLowerCase();
+  return (
+    s.includes("go back") ||
+    s.includes("mode selection") ||
+    s.includes("back to mode selection") ||
+    s.includes("exit") ||
+    s.includes("leave")
+  );
+}
+
+function exitToModeSelection(onBack?: () => void, setStatus?: Dispatch<SetStateAction<Status>>, isRunning?: React.MutableRefObject<boolean>) {
+  if (setStatus) setStatus("idle");
+  if (isRunning) isRunning.current = false;
+  if (onBack) onBack();
+}
+
 // ── Hook ───────────────────────────────────────────────────────────────────
 
-export function useLearningMode() {
+export function useLearningMode(onBack?: () => void) {
   const [subMode, setSubMode]   = useState<SubMode>("main");
   const [status,  setStatus]    = useState<Status>("idle");
   const isRunning               = useRef(false);
+  const onBackRef               = useRef(onBack);
+  const exitRequestedRef        = useRef(false);
 
   const [explanationState, setExplanationState] = useState<ExplanationState>({
     topic: "",
@@ -66,6 +85,7 @@ export function useLearningMode() {
     questions: [],
     currentIndex: 0,
     feedback: "",
+    score: 0,
     isComplete: false,
   });
 
@@ -94,13 +114,23 @@ export function useLearningMode() {
     setSubMode("explanation");
     setExplanationState({ topic: "", explanation: "" });
 
-    await say("Explanation Mode. Say the topic you want to learn about.");
+    await say("Explanation Mode. Say the topic you want to learn about, or say go back to return to mode selection.");
 
     const topic = await listen();
+    if (isGoBackCommand(topic)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
 
     if (!topic) {
       await say("I didn't catch that. Say the topic you want to learn about.");
       const retry = await listen();
+      if (isGoBackCommand(retry)) {
+        exitRequestedRef.current = true;
+        exitToModeSelection(onBackRef.current, setStatus, isRunning);
+        return;
+      }
       if (!retry) {
         await say("Still couldn't hear you. Returning to the main menu.");
         await runMainMenu();
@@ -129,12 +159,21 @@ export function useLearningMode() {
     );
 
     const choice = await listen();
+    if (isGoBackCommand(choice)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
 
     if (choice.includes("again") || choice.includes("repeat")) {
       await say(explanation);
       await runExplanationPostMenu(topic, explanation);
     } else if (choice.includes("new") || choice.includes("topic")) {
       await runExplanationFlow();
+    } else if (detectSubMode(choice) === "recall") {
+      await runRecallFlow();
+    } else if (detectSubMode(choice) === "teach") {
+      await runTeachFlow();
     } else {
       await runMainMenu();
     }
@@ -147,11 +186,21 @@ export function useLearningMode() {
       "or 'menu' to go back."
     );
     const choice = await listen();
+    if (isGoBackCommand(choice)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
+
     if (choice.includes("again") || choice.includes("repeat")) {
       await say(explanation);
       await runExplanationPostMenu(topic, explanation);
     } else if (choice.includes("new") || choice.includes("topic")) {
       await runExplanationFlow();
+    } else if (detectSubMode(choice) === "recall") {
+      await runRecallFlow();
+    } else if (detectSubMode(choice) === "teach") {
+      await runTeachFlow();
     } else {
       await runMainMenu();
     }
@@ -161,14 +210,24 @@ export function useLearningMode() {
 
   async function runRecallFlow() {
     setSubMode("recall");
-    setRecallState({ topic: "", questions: [], currentIndex: 0, feedback: "", isComplete: false });
+    setRecallState({ topic: "", questions: [], currentIndex: 0, feedback: "", score: 0, isComplete: false });
 
     await say("Active Recall. Say the topic you want to be quizzed on.");
 
     const topic = await listen();
+    if (isGoBackCommand(topic)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
     if (!topic) {
       await say("I didn't catch that. Say the topic you want to be quizzed on.");
       const retry = await listen();
+      if (isGoBackCommand(retry)) {
+        exitRequestedRef.current = true;
+        exitToModeSelection(onBackRef.current, setStatus, isRunning);
+        return;
+      }
       if (!retry) {
         await say("Still couldn't hear you. Returning to the main menu.");
         await runMainMenu();
@@ -181,55 +240,135 @@ export function useLearningMode() {
   }
 
   async function runRecallForTopic(topic: string) {
-    await say(`Generating three questions about ${topic}. Please wait.`);
+    await say(`Generating five multiple-choice questions about ${topic}. Please wait.`);
 
     setStatus("processing");
     const questions = await generateRecallQuestions(topic);
-    setRecallState({ topic, questions, currentIndex: 0, feedback: "", isComplete: false });
+    setRecallState({ topic, questions, currentIndex: 0, feedback: "", score: 0, isComplete: false });
 
-    await say(`Ready. I have three questions for you about ${topic}.`);
-    await runRecallQuestion(topic, questions, 0);
+    await say(`Ready. I have ${questions.length} questions for you about ${topic}.`);
+    await runRecallQuestion(topic, questions, 0, 0);
+  }
+
+  function parseOptionSelection(answer: string, options: string[]): number {
+    const normalized = answer.trim().toLowerCase();
+    if (!normalized) return -1;
+
+    const normalizedTokens = normalized.replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+    const firstToken = normalizedTokens[0] ?? "";
+    const letterMap: Record<string, number> = {
+      a: 0,
+      b: 1,
+      c: 2,
+      d: 3,
+      "option a": 0,
+      "option b": 1,
+      "option c": 2,
+      "option d": 3,
+      first: 0,
+      second: 1,
+      third: 2,
+      fourth: 3,
+      one: 0,
+      two: 1,
+      three: 2,
+      four: 3,
+    };
+
+    if (letterMap[firstToken] !== undefined) {
+      const index = letterMap[firstToken];
+      return options[index] ? index : -1;
+    }
+
+    const join = normalizedTokens.join(" ");
+    for (let index = 0; index < options.length; index++) {
+      if (options[index].toLowerCase() === join) {
+        return index;
+      }
+    }
+
+    for (let index = 0; index < options.length; index++) {
+      if (join.includes(options[index].toLowerCase())) {
+        return index;
+      }
+    }
+
+    return -1;
   }
 
   async function runRecallQuestion(
     topic: string,
     questions: RecallQuestion[],
-    index: number
+    index: number,
+    currentScore: number
   ) {
-    setRecallState((prev) => ({ ...prev, currentIndex: index, feedback: "" }));
+    setRecallState((prev) => ({ ...prev, currentIndex: index, feedback: "", score: currentScore }));
 
-    await say(`Question ${index + 1} of ${questions.length}: ${questions[index].question}`);
-    await say("Speak your answer now.");
+    const question = questions[index];
+    await say(`Question ${index + 1} of ${questions.length}: ${question.question}`);
+    await say(`Option A: ${question.options[0]}. Option B: ${question.options[1]}. Option C: ${question.options[2]}. Option D: ${question.options[3]}.`);
+    await say("Say the letter of your choice, or say the answer option.");
 
-    const answer = await listen();
+    let answer = await listen();
+    if (isGoBackCommand(answer)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
 
-    await say("Checking your answer.");
-    setStatus("processing");
+    let selectedIndex = parseOptionSelection(answer, question.options);
+    if (selectedIndex === -1) {
+      await say("I didn't understand that answer. Please say A, B, C, or D.");
+      answer = await listen();
+      if (isGoBackCommand(answer)) {
+        exitRequestedRef.current = true;
+        exitToModeSelection(onBackRef.current, setStatus, isRunning);
+        return;
+      }
+      selectedIndex = parseOptionSelection(answer, question.options);
+    }
 
-    const feedback = await evaluateRecallAnswer(
-      questions[index].question,
-      questions[index].answer,
-      answer
-    );
+    if (selectedIndex === -1) {
+      await say("I still couldn't understand the choice. I'll move to the next question.");
+      selectedIndex = -1;
+    }
 
-    setRecallState((prev) => ({ ...prev, feedback }));
+    const isCorrect = selectedIndex === question.correctIndex;
+    const chosenText = selectedIndex >= 0 ? question.options[selectedIndex] : "your selection";
+    const correctText = question.options[question.correctIndex];
+    const feedback = isCorrect
+      ? `Correct. The right answer is ${correctText}.`
+      : `Not quite. The correct answer is ${correctText}.`;
+
+    const nextScore = isCorrect ? currentScore + 1 : currentScore;
+    setRecallState((prev) => ({ ...prev, feedback, score: nextScore }));
     await say(feedback);
 
     const nextIndex = index + 1;
     if (nextIndex < questions.length) {
       await delay(500);
-      await runRecallQuestion(topic, questions, nextIndex);
+      await runRecallQuestion(topic, questions, nextIndex, nextScore);
     } else {
-      setRecallState((prev) => ({ ...prev, isComplete: true }));
+      setRecallState((prev) => ({ ...prev, isComplete: true, score: nextScore }));
       await say(
-        `You have completed all three questions on ${topic}. Well done! ` +
-        "Say 'again' to redo this quiz, 'new topic' for a different topic, or 'menu' to go back."
+        `You have completed all ${questions.length} questions on ${topic}. ` +
+        `You answered ${nextScore} out of ${questions.length} correctly. Great work! ` +
+        "Say 'again' to redo this quiz, 'new topic' for a different topic, or 'go back' to return to mode selection."
       );
       const choice = await listen();
+      if (isGoBackCommand(choice)) {
+        exitRequestedRef.current = true;
+        exitToModeSelection(onBackRef.current, setStatus, isRunning);
+        return;
+      }
       if (choice.includes("again") || choice.includes("redo")) {
         await runRecallForTopic(topic);
       } else if (choice.includes("new") || choice.includes("topic")) {
         await runRecallFlow();
+      } else if (detectSubMode(choice) === "explanation") {
+        await runExplanationFlow();
+      } else if (detectSubMode(choice) === "teach") {
+        await runTeachFlow();
       } else {
         await runMainMenu();
       }
@@ -245,9 +384,19 @@ export function useLearningMode() {
     await say("Teach Me Back. Say the topic you want to teach.");
 
     const topic = await listen();
+    if (isGoBackCommand(topic)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
     if (!topic) {
       await say("I didn't catch that. Say the topic you want to teach.");
       const retry = await listen();
+      if (isGoBackCommand(retry)) {
+        exitRequestedRef.current = true;
+        exitToModeSelection(onBackRef.current, setStatus, isRunning);
+        return;
+      }
       if (!retry) {
         await say("Still couldn't hear you. Returning to the main menu.");
         await runMainMenu();
@@ -269,6 +418,11 @@ export function useLearningMode() {
     );
 
     const studentExplanation = await listen();
+    if (isGoBackCommand(studentExplanation)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
 
     await say("Analysing your explanation. Please wait.");
     setStatus("processing");
@@ -284,10 +438,19 @@ export function useLearningMode() {
     );
 
     const choice = await listen();
+    if (isGoBackCommand(choice)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
     if (choice.includes("again") || choice.includes("retry")) {
       await runTeachForTopic(topic);
     } else if (choice.includes("new") || choice.includes("topic")) {
       await runTeachFlow();
+    } else if (detectSubMode(choice) === "explanation") {
+      await runExplanationFlow();
+    } else if (detectSubMode(choice) === "recall") {
+      await runRecallFlow();
     } else {
       await runMainMenu();
     }
@@ -306,8 +469,13 @@ export function useLearningMode() {
     );
 
     const choice = await listen();
-    const detected = detectSubMode(choice);
+    if (isGoBackCommand(choice)) {
+      exitRequestedRef.current = true;
+      exitToModeSelection(onBackRef.current, setStatus, isRunning);
+      return;
+    }
 
+    const detected = detectSubMode(choice);
     if (detected === "explanation") {
       await runExplanationFlow();
     } else if (detected === "recall") {
@@ -327,6 +495,7 @@ export function useLearningMode() {
   const startLearningMode = useCallback(async () => {
     if (isRunning.current) return;
     isRunning.current = true;
+    exitRequestedRef.current = false;
     try {
       await runMainMenu();
     } finally {

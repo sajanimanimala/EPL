@@ -28,7 +28,7 @@ export default function LearningMode({ onBack }: LearningModeProps) {
     recallState,
     teachState,
     startLearningMode,
-  } = useLearningMode();
+  } = useLearningMode(onBack);
 
   // Start voice loop as soon as component mounts
   useEffect(() => {
@@ -156,15 +156,29 @@ function ContextCard({
           </div>
         )}
         {current && !recallState.isComplete && (
-          <div className="bg-[#1a1a1a] border-2 border-white/20 rounded-xl p-6">
-            <p className="text-[16px] text-white/50 uppercase tracking-widest mb-2"
-               style={{ fontFamily: "Neuton, serif" }}>
-              Question {recallState.currentIndex + 1} of {recallState.questions.length}
-            </p>
-            <p className="text-[22px] font-bold text-white leading-snug"
-               style={{ fontFamily: "Neuton, serif" }}>
-              {current.question}
-            </p>
+          <div className="bg-[#1a1a1a] border-2 border-white/20 rounded-xl p-6 flex flex-col gap-4">
+            <div>
+              <p className="text-[16px] text-white/50 uppercase tracking-widest mb-2"
+                 style={{ fontFamily: "Neuton, serif" }}>
+                Question {recallState.currentIndex + 1} of {recallState.questions.length}
+              </p>
+              <p className="text-[22px] font-bold text-white leading-snug"
+                 style={{ fontFamily: "Neuton, serif" }}>
+                {current.question}
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {current.options.map((option, idx) => (
+                <div key={option} className="bg-black/80 border border-white/10 rounded-xl p-4">
+                  <p className="text-[18px] text-[#FFD700] font-semibold" style={{ fontFamily: "Neuton, serif" }}>
+                    {String.fromCharCode(65 + idx)}.
+                  </p>
+                  <p className="text-[18px] text-white leading-relaxed" style={{ fontFamily: "Neuton, serif" }}>
+                    {option}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         {recallState.feedback && (
@@ -181,6 +195,9 @@ function ContextCard({
           <div className="bg-[#1a1a1a] border-2 border-[#FFD700] rounded-xl p-6">
             <p className="text-[22px] font-bold text-[#FFD700]" style={{ fontFamily: "Neuton, serif" }}>
               Quiz Complete!
+            </p>
+            <p className="text-[18px] mt-3 text-white/80" style={{ fontFamily: "Neuton, serif" }}>
+              Score: {recallState.score} out of {recallState.questions.length}
             </p>
           </div>
         )}

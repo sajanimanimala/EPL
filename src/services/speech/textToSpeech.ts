@@ -1,8 +1,13 @@
-export function speak(text: string) {
-  const utterance = new SpeechSynthesisUtterance(text);
+export function speak(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
 
-  utterance.rate = 0.9;
-  utterance.pitch = 1;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
 
-  speechSynthesis.speak(utterance);
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+
+    speechSynthesis.speak(utterance);
+  });
 }
