@@ -312,13 +312,25 @@ export function useLearningMode(onBack?: () => void) {
     const question = questions[index];
     await say(`Question ${index + 1} of ${questions.length}: ${question.question}`);
     await say(`Option A: ${question.options[0]}. Option B: ${question.options[1]}. Option C: ${question.options[2]}. Option D: ${question.options[3]}.`);
-    await say("Say the letter of your choice, or say the answer option.");
+    await say("If you want me to repeat the question, say repeat. Otherwise say the letter of your choice or the answer option.");
 
     let answer = await listen();
     if (isGoBackCommand(answer)) {
       exitRequestedRef.current = true;
       exitToModeSelection(onBackRef.current, setStatus, isRunning);
       return;
+    }
+
+    if (answer.includes("repeat")) {
+      await say(`Question ${index + 1} of ${questions.length}: ${question.question}`);
+      await say(`Option A: ${question.options[0]}. Option B: ${question.options[1]}. Option C: ${question.options[2]}. Option D: ${question.options[3]}.`);
+      await say("Now say the letter of your choice, or say the answer option.");
+      answer = await listen();
+      if (isGoBackCommand(answer)) {
+        exitRequestedRef.current = true;
+        exitToModeSelection(onBackRef.current, setStatus, isRunning);
+        return;
+      }
     }
 
     let selectedIndex = parseOptionSelection(answer, question.options);
@@ -329,6 +341,17 @@ export function useLearningMode(onBack?: () => void) {
         exitRequestedRef.current = true;
         exitToModeSelection(onBackRef.current, setStatus, isRunning);
         return;
+      }
+      if (answer.includes("repeat")) {
+        await say(`Question ${index + 1} of ${questions.length}: ${question.question}`);
+        await say(`Option A: ${question.options[0]}. Option B: ${question.options[1]}. Option C: ${question.options[2]}. Option D: ${question.options[3]}.`);
+        await say("Now say the letter of your choice, or say the answer option.");
+        answer = await listen();
+        if (isGoBackCommand(answer)) {
+          exitRequestedRef.current = true;
+          exitToModeSelection(onBackRef.current, setStatus, isRunning);
+          return;
+        }
       }
       selectedIndex = parseOptionSelection(answer, question.options);
     }

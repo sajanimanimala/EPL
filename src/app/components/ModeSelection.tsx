@@ -1,8 +1,8 @@
 import {
+  ArrowLeft,
   Briefcase,
   BookOpen,
   Search,
-  RotateCcw,
   Mic,
 } from 'lucide-react';
 
@@ -13,10 +13,12 @@ import { speak } from "../../services/speech/textToSpeech";
 
 interface ModeSelectionProps {
   onSelectMode: (mode: 'productivity' | 'learning' | 'research') => void;
+  onGoBack: () => void;
 }
 
 export default function ModeSelection({
   onSelectMode,
+  onGoBack,
 }: ModeSelectionProps) {
 
   const [status, setStatus] = useState("Idle");
@@ -28,7 +30,7 @@ export default function ModeSelection({
 
   async function startVoiceFlow() {
     setStatus("Speaking...");
-    speak("Choose a mode. Say Productivity Mode, Learning Mode, or Research Mode.");
+    speak("Choose a mode. Say Productivity Mode, Learning Mode, Research Mode, or say Go Back to return.");
 
     setTimeout(async () => {
       setStatus("Listening...");
@@ -61,15 +63,17 @@ export default function ModeSelection({
       setTimeout(() => onSelectMode("research"), 2000);
     }
 
+    else if (lower.includes("go back") || lower.includes("back") || lower.includes("return")) {
+      speak("Going back to the main page.");
+      setStatus("Speaking...");
+      setTimeout(() => onGoBack(), 2000);
+    }
+
     else {
       speak("I did not understand. Please try again.");
       setStatus("Idle");
       setTimeout(() => startVoiceFlow(), 5000); // ✅ increased to 5s so TTS finishes before retrying
     }
-  }
-
-  function repeatInstructions() {
-    speak("Say Productivity Mode, Learning Mode, or Research Mode.");
   }
 
   return (
@@ -131,14 +135,13 @@ export default function ModeSelection({
 
         </div>
 
-        {/* Repeat Instructions */}
         <button
-          onClick={repeatInstructions}
+          onClick={onGoBack}
           className="w-full min-h-[90px] border-2 border-[#FFD700] text-white rounded-lg hover:bg-[#FFD700] hover:text-black transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-[#FFD700] flex items-center justify-center gap-4"
         >
-          <RotateCcw size={24} />
+          <ArrowLeft size={24} />
           <span className="text-[22px] font-semibold" style={{ fontFamily: 'Neuton, serif' }}>
-            Repeat Instructions
+            Go Back
           </span>
         </button>
 

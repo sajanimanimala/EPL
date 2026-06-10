@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import StartScreen from './components/StartScreen';
+import DemoScreen from './components/DemoScreen';
 import ModeSelection from './components/ModeSelection';
 import ProductivityMode from './components/ProductivityMode';
 import LearningMode from './components/LearningMode';
 import ResearchMode from './components/ResearchMode';
 
-type Screen = 'start' | 'mode-selection' | 'productivity' | 'learning' | 'research';
+type Screen = 'start' | 'demo' | 'mode-selection' | 'productivity' | 'learning' | 'research';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('start');
@@ -13,7 +14,16 @@ export default function App() {
   return (
     <div className="min-h-screen w-full bg-black text-white overflow-y-auto">
       {currentScreen === 'start' && (
-        <StartScreen onStart={() => setCurrentScreen('mode-selection')} />
+        <StartScreen
+          onStart={() => setCurrentScreen('mode-selection')}
+          onDemo={() => setCurrentScreen('demo')}
+        />
+      )}
+      {currentScreen === 'demo' && (
+        <DemoScreen
+          onBack={() => setCurrentScreen('start')}
+          onStartAssistant={() => setCurrentScreen('mode-selection')}
+        />
       )}
 
       {currentScreen === 'mode-selection' && (
@@ -23,6 +33,7 @@ export default function App() {
             if (mode === 'learning') setCurrentScreen('learning');
             if (mode === 'research') setCurrentScreen('research');
           }}
+          onGoBack={() => setCurrentScreen('start')}
         />
       )}
 

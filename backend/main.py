@@ -53,7 +53,7 @@ def search_arxiv(query: str, max_results: int = 2):
         uri = urllib.parse.quote(query)
         url = (
             f"https://export.arxiv.org/api/query?"
-            f"search_query=all:{uri}&start=0&max_results={max_results}&"
+            f"search_query=ti:{uri}&start=0&max_results={max_results}&"
             f"sortBy=submittedDate&sortOrder=descending"
         )
         request = urllib.request.Request(
@@ -147,17 +147,27 @@ def search_semantic_scholar(query: str, max_results: int = 2):
                 "introduction": introduction or abstract or "Introduction not available.",
                 "conclusion": conclusion or abstract or "Conclusion not available.",
             })
-        return entries
+        return filter_results_by_title(query, entries)
     except Exception as e:
         print("Semantic Scholar search error:", e)
         return []
+
+
+def filter_results_by_title(query: str, results: list):
+    normalized_query = query.strip().casefold()
+    if not normalized_query:
+        return results
+    return [
+        entry for entry in results
+        if normalized_query in (entry.get("title") or "").casefold()
+    ]
 
 
 def search_openalex(query: str, max_results: int = 2):
     try:
         uri = urllib.parse.quote(query)
         url = (
-            f"https://api.openalex.org/works?search={uri}&per-page={max_results}"
+            f"https://api.openalex.org/works?search=title:{uri}&per-page={max_results}"
         )
         request = urllib.request.Request(
             url,
@@ -217,7 +227,7 @@ def search_openalex(query: str, max_results: int = 2):
                 "introduction": introduction,
                 "conclusion": conclusion,
             })
-        return entries
+        return filter_results_by_title(query, entries)
     except Exception as e:
         print("OpenAlex search error:", e)
         return []
@@ -227,7 +237,7 @@ def search_crossref(query: str, max_results: int = 2):
     try:
         uri = urllib.parse.quote(query)
         url = (
-            f"https://api.crossref.org/works?query={uri}&rows={max_results}&sort=score"
+            f"https://api.crossref.org/works?query.title={uri}&rows={max_results}&sort=score"
         )
         request = urllib.request.Request(
             url,
@@ -277,7 +287,7 @@ def search_crossref(query: str, max_results: int = 2):
                 "introduction": introduction,
                 "conclusion": conclusion,
             })
-        return entries
+        return filter_results_by_title(query, entries)
     except Exception as e:
         print("Crossref search error:", e)
         return []
