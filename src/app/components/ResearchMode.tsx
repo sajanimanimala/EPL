@@ -1,3 +1,5 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
 import { useState, useEffect, useRef } from 'react';
 import { Search, Bookmark, ArrowLeft, Mic, Play, Volume2, Highlighter } from 'lucide-react';
 
@@ -62,7 +64,7 @@ async function recordAudio(ms: number): Promise<string> {
         const form = new FormData();
         form.append("file", blob, "recording.webm");
         try {
-          const res = await fetch("http://127.0.0.1:8000/transcribe", { method: "POST", body: form });
+          const res = await fetch(`${API_URL}/transcribe`, { method: "POST", body: form });
           const data = await res.json();
           resolve(data.text || "");
         } catch { resolve(""); }
@@ -74,10 +76,10 @@ async function recordAudio(ms: number): Promise<string> {
 }
 
 async function fetchPapersFromBackend(topic: string): Promise<Paper[]> {
-  const localUrl = `http://127.0.0.1:8000/research/search?q=${encodeURIComponent(topic)}`;
+  const searchUrl = `${API_URL}/research/search?q=${encodeURIComponent(topic)}`;
 
   try {
-    const res = await fetch(localUrl);
+    const res = await fetch(searchUrl);
     if (!res.ok) {
       const err = await res.text();
       console.error("Backend search error:", err);

@@ -21,13 +21,10 @@ export async function recordAndSendAudio(durationMs = 4000) {
 
       formData.append("file", audioBlob, "recording.wav");
 
-      const response = await fetch(
-        "http://127.0.0.1:8000/transcribe",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${API_URL}/transcribe`, {
+        method: "POST",
+        body: formData,
+      });
 
       const data = await response.json();
 

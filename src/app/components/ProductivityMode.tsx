@@ -1,3 +1,5 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
 import {
   Bell,
   TrendingUp,
@@ -91,7 +93,7 @@ async function recordAudio(ms: number): Promise<string> {
       const formData = new FormData();
       formData.append("file", blob, "recording.webm");
       try {
-        const res = await fetch("http://127.0.0.1:8000/transcribe", {
+        const res = await fetch(`${API_URL}/transcribe`, {
           method: "POST",
           body: formData,
         });
