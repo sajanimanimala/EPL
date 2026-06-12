@@ -154,21 +154,21 @@ export default function StartScreen({ onStart, onDemo }: StartScreenProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-6 py-12 bg-black text-white">
+    <div className="flex flex-col items-center justify-center h-full px-4 py-10 bg-black text-white sm:px-6 sm:py-12">
       
-      <div className="flex flex-col items-center gap-12 max-w-2xl w-full">
+      <div className="flex flex-col items-center gap-10 max-w-2xl w-full">
         
         {/* App Title */}
         <div className="text-center">
           <h1
-            className="text-[64px] font-bold mb-4"
+            className="text-[46px] font-bold mb-4 sm:text-[64px]"
             style={{ fontFamily: 'Neuton, serif' }}
           >
             EchoEd
           </h1>
 
           <p
-            className="text-[22px]"
+            className="text-[18px] sm:text-[22px]"
             style={{ fontFamily: 'Inter, sans-serif' }}
           >
             Voice-First Learning Assistant
@@ -180,7 +180,8 @@ export default function StartScreen({ onStart, onDemo }: StartScreenProps) {
           onClick={handleStart}
           className="
             w-full
-            min-h-[90px]
+            min-h-[80px]
+            sm:min-h-[90px]
             bg-[#FFD700]
             text-black
             rounded-lg
@@ -210,7 +211,8 @@ export default function StartScreen({ onStart, onDemo }: StartScreenProps) {
           onClick={handleDemo}
           className="
             w-full
-            min-h-[90px]
+            min-h-[80px]
+            sm:min-h-[90px]
             bg-white/10
             text-white
             border border-white/20

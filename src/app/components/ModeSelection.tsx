@@ -77,12 +77,12 @@ export default function ModeSelection({
   }
 
   return (
-    <div className="flex flex-col h-full px-6 py-12 bg-black text-white">
+    <div className="flex flex-col h-full px-4 py-10 bg-black text-white sm:px-6 sm:py-12">
       <div className="max-w-4xl w-full mx-auto flex flex-col gap-8">
 
         {/* Title */}
         <h1
-          className="text-[48px] font-bold text-center mb-4"
+          className="text-[40px] font-bold text-center mb-4 sm:text-[48px]"
           style={{ fontFamily: 'Neuton, serif' }}
         >
           Choose Mode

@@ -144,21 +144,21 @@ export default function DemoScreen({ onBack, onStartAssistant }: DemoScreenProps
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-6 py-12 bg-black text-white">
+    <div className="flex flex-col items-center justify-center h-full px-4 py-10 bg-black text-white sm:px-6 sm:py-12">
       <div className="flex flex-col items-center gap-10 max-w-3xl w-full">
-        <div className="w-full flex items-center justify-between">
+        <div className="flex flex-col gap-4 w-full sm:flex-row sm:items-center sm:justify-between">
           <button
             onClick={() => {
               cancelSpeech();
               onBack();
             }}
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-white/10 border border-gray-700 text-white hover:bg-white/15"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white/10 border border-gray-700 text-white hover:bg-white/15"
           >
             <ArrowLeft size={18} /> Back
           </button>
           <button
             onClick={cancelSpeech}
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-red-600 text-white hover:bg-red-500"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-600 text-white hover:bg-red-500"
           >
             Stop Voice
           </button>
@@ -173,7 +173,7 @@ export default function DemoScreen({ onBack, onStartAssistant }: DemoScreenProps
           </p>
         </div>
 
-        <div className="space-y-4 w-full rounded-3xl bg-white/5 border border-white/10 p-8">
+        <div className="space-y-4 w-full rounded-3xl bg-white/5 border border-white/10 p-6 sm:p-8">
           <p className="text-[18px] text-white font-semibold" style={{ fontFamily: 'Inter, sans-serif' }}>
             How to use EchoEd
           </p>
@@ -195,7 +195,7 @@ export default function DemoScreen({ onBack, onStartAssistant }: DemoScreenProps
             cancelSpeech();
             onStartAssistant();
           }}
-          className="w-full min-h-[90px] bg-[#FFD700] text-black rounded-lg hover:scale-105 transition-transform duration-200 focus:outline-none focus:ring-4 focus:ring-[#FFD700] flex items-center justify-center gap-4"
+          className="w-full min-h-[80px] sm:min-h-[90px] bg-[#FFD700] text-black rounded-lg hover:scale-105 transition-transform duration-200 focus:outline-none focus:ring-4 focus:ring-[#FFD700] flex items-center justify-center gap-4"
         >
           <Volume2 size={32} />
           <span className="text-[24px] font-bold" style={{ fontFamily: 'Neuton, serif' }}>
